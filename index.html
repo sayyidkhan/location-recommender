@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recommend – Post-Event Suggestions</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2rem;
+      color: #1a1a1a;
+      background: #f8f9fa;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    label { display: block; font-weight: 500; margin-bottom: 0.25rem; }
+    input, textarea {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    .results { margin-top: 2rem; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+    .card p { margin: 0; color: #555; font-size: 0.95rem; line-height: 1.4; }
+    .card img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-top: 0.75rem;
+    }
+    .card .img-placeholder {
+      background: #f1f5f9;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-top: 0.75rem;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+    .retry-btn {
+      background: #64748b;
+      color: white;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+    .retry-btn:hover { background: #475569; }
+    .error { color: #dc2626; background: #fef2f2; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+    .usage {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    .usage h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
+    .usage pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+    .loading { color: #64748b; margin-top: 1rem; }
+    .presets-label { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; }
+    .presets { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .preset {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      border: 1px solid #e2e8f0;
+    }
+    .preset:hover { background: #e2e8f0; color: #334155; }
+    .optional { font-weight: normal; color: #94a3b8; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>Recommend</h1>
+  <p class="subtitle">Get 3 post-event suggestions with AI-generated images</p>
+
+  <form id="form">
+    <label for="event">Event</label>
+    <textarea id="event" placeholder="e.g. Just left a jazz concert, feeling relaxed" required></textarea>
+
+    <label for="location">Location</label>
+    <input id="location" type="text" placeholder="e.g. Brooklyn, NY" required />
+
+    <label for="apiKey">API key <span class="optional">(if RECOMMEND_API_KEY is set)</span></label>
+    <input id="apiKey" type="password" placeholder="Your API key" autocomplete="off" />
+
+    <p class="presets-label">Quick presets</p>
+    <div class="presets">
+      <button type="button" class="preset" data-event="Just left a jazz concert, feeling relaxed" data-location="Brooklyn, NY">Jazz concert → Brooklyn</button>
+      <button type="button" class="preset" data-event="Finished a 2-hour tech meetup, feeling energized" data-location="San Francisco">Tech meetup → SF</button>
+      <button type="button" class="preset" data-event="Just left a hackathon, super tired" data-location="Singapore">Hackathon → Singapore</button>
+      <button type="button" class="preset" data-event="Went to a comedy show, in a good mood" data-location="London">Comedy show → London</button>
+    </div>
+
+    <button type="submit" id="submit">Get recommendations</button>
+  </form>
+
+  <div id="loading" class="loading" style="display: none;">Generating recommendations… (this may take 20–30 seconds)</div>
+  <div id="results" class="results"></div>
+  <div id="error" class="error" style="display: none;"></div>
+
+  <section class="usage">
+    <h2>How to use the API</h2>
+    <pre id="curl-example">curl -X POST <span id="api-url">/api/recommend</span> \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{"event": "Just left a jazz concert, feeling relaxed", "location": "Brooklyn, NY"}'</pre>
+  </section>
+
+  <script>
+    const form = document.getElementById('form');
+    const results = document.getElementById('results');
+    const loading = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const submitBtn = document.getElementById('submit');
+    const apiUrl = window.location.origin + '/api/recommend';
+
+    document.getElementById('api-url').textContent = apiUrl;
+
+    document.querySelectorAll('.preset').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.getElementById('event').value = btn.dataset.event;
+        document.getElementById('location').value = btn.dataset.location;
+      });
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const event = document.getElementById('event').value.trim();
+      const location = document.getElementById('location').value.trim();
+      const apiKey = document.getElementById('apiKey').value.trim();
+
+      results.innerHTML = '';
+      errorEl.style.display = 'none';
+      loading.style.display = 'block';
+      submitBtn.disabled = true;
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ event, location }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+
+        data.recommendations.forEach((rec) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h3>${escapeHtml(rec.title)}</h3>
+            <p>${escapeHtml(rec.description)}</p>
+          `;
+
+          if (rec.imageUrl) {
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'img-wrap';
+            const img = document.createElement('img');
+            img.alt = escapeHtml(rec.title);
+            img.loading = 'lazy';
+
+            const maxRetries = 3;
+            let retries = 0;
+
+            function loadImage() {
+              img.src = rec.imageUrl + (rec.imageUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+            }
+
+            img.onerror = () => {
+              retries++;
+              if (retries <= maxRetries) {
+                setTimeout(loadImage, 1000 * retries);
+              } else {
+                img.style.display = 'none';
+                const placeholder = document.createElement('div');
+                placeholder.className = 'img-placeholder';
+                placeholder.innerHTML = `Image failed to load<br><button type="button" class="retry-btn">Retry</button>`;
+                placeholder.querySelector('.retry-btn').onclick = () => {
+                  retries = 0;
+                  placeholder.remove();
+                  img.style.display = '';
+                  loadImage();
+                };
+                imgWrap.appendChild(placeholder);
+              }
+            };
+
+            img.onload = () => { img.style.display = ''; };
+            loadImage();
+            imgWrap.appendChild(img);
+            card.appendChild(imgWrap);
+          } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'img-placeholder';
+            placeholder.textContent = 'Image unavailable';
+            card.appendChild(placeholder);
+          }
+
+          results.appendChild(card);
+        });
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+      } finally {
+        loading.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    });
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

@@ -5,6 +5,22 @@ app.use(express.json());
 
 const WAVESPEED_API = 'https://api.wavespeed.ai/api/v3';
 
+function authMiddleware(req, res, next) {
+  const serverKey = process.env.RECOMMEND_API_KEY;
+  if (!serverKey) return next();
+
+  const authHeader = req.headers.authorization;
+  const apiKeyHeader = req.headers['x-api-key'];
+  const clientKey = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : apiKeyHeader;
+
+  if (!clientKey || clientKey !== serverKey) {
+    return res.status(401).json({ error: 'Invalid or missing API key' });
+  }
+  next();
+}
+
 async function getRecommendations(event, location) {
   const apiKey = process.env.WAVESPEED_API_KEY;
   if (!apiKey) throw new Error('WAVESPEED_API_KEY not set');
@@ -95,6 +111,7 @@ const recommendHandler = async (req, res) => {
   }
 };
 
+app.use(authMiddleware);
 app.post('/', recommendHandler);
 app.post('/api/recommend', recommendHandler);
 app.all('*', (req, res) => res.status(405).json({ error: 'Method not allowed' }));

@@ -15,6 +15,8 @@ Returns 3 recommendations (text + image) for what to do after an event.
 | Header | Value |
 |--------|-------|
 | `Content-Type` | `application/json` |
+| `Authorization` | `Bearer <RECOMMEND_API_KEY>` (required if `RECOMMEND_API_KEY` env is set) |
+| `X-API-Key` | Alternative to Authorization header |
 
 **Body**
 
@@ -76,6 +78,7 @@ Returns 3 recommendations (text + image) for what to do after an event.
 | Status | Description |
 |--------|-------------|
 | `400` | Invalid request (missing `event` or `location`) |
+| `401` | Invalid or missing API key (when `RECOMMEND_API_KEY` is set) |
 | `500` | Server error (e.g. AI service failure) |
 
 **Error response body**
@@ -95,6 +98,7 @@ Returns 3 recommendations (text + image) for what to do after an event.
 ```bash
 curl -X POST https://your-app.vercel.app/api/recommend \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_RECOMMEND_API_KEY" \
   -d '{
     "event": "Just left a jazz concert, feeling relaxed",
     "location": "Brooklyn, NY"

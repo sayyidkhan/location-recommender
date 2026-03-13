@@ -9,12 +9,13 @@ Post-event recommendation API. Takes event details + location, returns 3 suggest
    npm install
    ```
 
-2. **Set your WaveSpeed API key**
+2. **Set environment variables**
    ```bash
    cp .env.example .env
-   # Edit .env and add: WAVESPEED_API_KEY=your_key
+   # Edit .env:
+   # - WAVESPEED_API_KEY (required) - get at wavespeed.ai/accesskey
+   # - RECOMMEND_API_KEY (optional) - protects the API; clients must send it
    ```
-   Get your key at [wavespeed.ai/accesskey](https://wavespeed.ai/accesskey)
 
 ## Run locally
 
@@ -36,7 +37,7 @@ curl -X POST http://localhost:3000/api/recommend \
 
 1. Push to GitHub
 2. Import project in [vercel.com](https://vercel.com)
-3. Add `WAVESPEED_API_KEY` in Project Settings → Environment Variables
+3. Add `WAVESPEED_API_KEY` and optionally `RECOMMEND_API_KEY` in Project Settings → Environment Variables
 4. Deploy
 
 Endpoint: `POST https://your-app.vercel.app/api/recommend`

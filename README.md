@@ -62,12 +62,13 @@ curl -X POST http://localhost:3000/api/recommend \
 
 ```
 ├── api/
-│   └── recommend.js    # POST /api/recommend handler
+│   └── _recommend.js   # Recommend handler (underscore = not a Vercel function)
+├── index.js            # Express app (Vercel entry point)
+├── index.html          # Test UI
+├── server.js           # Local dev server
 ├── docs/
 │   ├── API.md          # API spec
 │   └── PRD-*.md        # Product requirements
-├── index.html          # Test UI
-├── server.js           # Local dev server
 ├── vercel.json
 └── package.json
 ```
